@@ -6,17 +6,15 @@ const agregarPelicula = async (nuevaPelicula) => {
 fetch('https://6a73b28c15e0453fe1b424c5.mockapi.io/peliculas', {
   method: 'POST',
   headers: {'content-type':'application/json'},
-  // Send your data in the request body as JSON
   body: JSON.stringify(nuevaPelicula)
 }).then(res => {
   if (res.ok) {
       return res.json();
   }
-  // handle error
 }).then(pelicula => {
   console.log('Pelicula creada:', pelicula);
 }).catch(error => {
-  // handle error
+    console.error('Error creando la película:', error);
 })
 
 }
@@ -29,55 +27,109 @@ const mostrarPeliculas = (peliculasEncontradas) => {
 
     contenedorPeliculas.innerHTML = '';
 
-    let peliculas = peliculasEncontradas || JSON.parse(localStorage.getItem('peliculas')) || [];
-
-    if (peliculas.length > 0) {
-   
-        peliculas.forEach(p => {
-                 let fotoPoster= p.imagen|| 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=200'
-            contenedorPeliculas.innerHTML += `
-                <div class="pelicula">
-                <img src="${fotoPoster}" alt="Poster" class="poster-pelicula">
-                    <div class="info">
-                        <p><strong>Título:</strong> ${p.titulo}</p>
-                        <p><strong>Género:</strong> ${p.genero}</p>
-                        <p><strong>Código:</strong> ${p.codigo}</p>
+    if (peliculasEncontradas) {
+        if (peliculasEncontradas.length > 0) {
+            peliculasEncontradas.forEach(p => {
+                let fotoPoster = p.imagen || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=200';
+                contenedorPeliculas.innerHTML += `
+                    <div class="pelicula">
+                        <img src="${fotoPoster}" alt="Poster" class="poster-pelicula">
+                        <div class="info">
+                            <p><strong>Título:</strong> ${p.titulo}</p>
+                            <p><strong>Género:</strong> ${p.genero}</p>
+                            <p><strong>Código:</strong> ${p.codigo}</p> <!-- VOLVIMOS A p.codigo -->
+                        </div>
+                        <div class="botones">
+                            <button class="btn-modificar" onclick="mostrarFormModificar('${p.titulo}', '${p.genero}', '${p.codigo}')">Modificar</button>
+                            <button class="btn-eliminar" onclick="eliminarPelicula('${p.codigo}')">Eliminar</button>
+                        </div>
                     </div>
-                    <div class="botones">
-                        <button class="btn-modificar" onclick="mostrarFormModificar('${p.titulo}', '${p.genero}', '${p.codigo}')">Modificar</button>
-                        <button class="btn-eliminar" onclick="eliminarPelicula('${p.codigo}')">Eliminar</button>
-                    </div>
-                </div>
-            `;
-        });
+                `;
+            });
+        } else {
+            contenedorPeliculas.innerHTML = '<p>No hay películas para mostrar.</p>';
+        }
     } else {
-        contenedorPeliculas.innerHTML = '<p>No hay películas para mostrar.</p>';
+        fetch(URL_API, {
+            method: 'GET',
+            headers: {'content-type':'application/json'},
+            cache: 'no-cache' 
+        }).then(res => {
+            if (res.ok) {
+                return res.json();
+            }
+        }).then(peliculas => {
+            if (peliculas.length > 0) {
+                peliculas.forEach(p => {
+                    let fotoPoster = p.imagen || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=200';
+                    contenedorPeliculas.innerHTML += `
+                        <div class="pelicula">
+                            <img src="${fotoPoster}" alt="Poster" class="poster-pelicula">
+                            <div class="info">
+                                <p><strong>Título:</strong> ${p.titulo}</p>
+                                <p><strong>Género:</strong> ${p.genero}</p>
+                                <p><strong>Código:</strong> ${p.codigo}</p> 
+                            </div>
+                            <div class="botones">
+                                <button class="btn-modificar" onclick="mostrarFormModificar('${p.titulo}', '${p.genero}', '${p.codigo}')">Modificar</button>
+                                <button class="btn-eliminar" onclick="eliminarPelicula('${p.codigo}')">Eliminar</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                contenedorPeliculas.innerHTML = '<p>No hay películas para mostrar.</p>';
+            }
+        }).catch(error => {
+            console.error('Error trayendo las películas:', error);
+        });
     }
 }
 //GET
 const buscarPelicula = (datosBusqueda) => {
-    let peliculas = JSON.parse(localStorage.getItem('peliculas')) || [];
-    let peliculasEncontradas = peliculas.filter(p => {
-        const coincideTitulo = datosBusqueda.nombreABuscar ?
-         p.titulo.toLowerCase().includes(datosBusqueda.nombreABuscar.toLowerCase()) : true;
+    fetch(URL_API, {
+        method: 'GET',
+        headers: {'content-type':'application/json'},
+        cache: 'no-cache'
+    }).then(res => {
+        if (res.ok) {
+            return res.json();
+        }
+    }).then(peliculas => {
+        let peliculasEncontradas = peliculas.filter(p => {
+            let tituloPeli = (p.titulo || '').toLowerCase();
+            let generoPeli = (p.genero || '').toLowerCase();
+            
+            let buscadoTitulo = (datosBusqueda.nombreABuscar || '').toLowerCase();
+            let buscadoGenero = (datosBusqueda.generoABuscar || '').toLowerCase();
 
-        const coincideGenero = datosBusqueda.generoABuscar ?
-         p.genero.toLowerCase() === datosBusqueda.generoABuscar.toLowerCase() : true;
+            const coincideTitulo = buscadoTitulo ? tituloPeli.includes(buscadoTitulo) : true;
+            const coincideGenero = buscadoGenero ? generoPeli === buscadoGenero : true;
 
-        return coincideTitulo && coincideGenero;
-    }); 
-    mostrarPeliculas(peliculasEncontradas);
+            return coincideTitulo && coincideGenero;
+        }); 
+        mostrarPeliculas(peliculasEncontradas);
+    }).catch(error => {
+        console.error('Error en la búsqueda:', error);
+    });
 }
 //DELETE
 const eliminarPelicula = (codigo) => {
     if (confirm ("¿Desea eliminar esta pelicula de la cartelera?")){
-        let peliculas = JSON.parse(localStorage.getItem("peliculas"))||[];
-        let indice=peliculas.findIndex(p=>p.codigo==codigo);
-
-        peliculas.splice(indice, 1);
-        localStorage.setItem("peliculas", JSON.stringify(peliculas));
-        mostrarPeliculas()
-        mostrarMensaje("Pelicula eliminada")
+        fetch(`${URL_API}/${codigo}`, {
+            method: 'DELETE',
+            headers: {'content-type':'application/json'},
+        }).then(res => {
+            if (res.ok) {
+                return res.json();
+            }
+        }).then(pelicula => {
+            console.log('Pelicula eliminada:', pelicula);
+            mostrarMensaje("Pelicula eliminada");
+            mostrarPeliculas(); 
+        }).catch(error => {
+            console.error('Error eliminando la película:', error);
+        });    
     }
 }
 //GET
@@ -112,15 +164,25 @@ const mostrarFormModificar = (tituloActual, generoActual, codigo) => {
 
 //PUT
 const modificarPelicula=(nuevosDatos)=>{  
-    let peliculas= JSON.parse(localStorage.getItem('peliculas'))||[];
-    let peliculasAModif= peliculas.find(p=>String(p.codigo)===String(nuevosDatos.codigoAModif));
-    
-    if(peliculasAModif){
-        peliculasAModif.titulo=nuevosDatos.nombreAModif;
-        peliculasAModif.genero=nuevosDatos.generoAModif;
-    
-    localStorage.setItem("peliculas", JSON.stringify(peliculas));
-    mostrarPeliculas(peliculas);
-    mostrarMensaje("Pelicula actualizada")
-}
+    const datosEditados = {
+        titulo: nuevosDatos.nombreAModif,
+        genero: nuevosDatos.generoAModif
+    };
+
+    fetch(`${URL_API}/${nuevosDatos.codigoAModif}`, {
+        method: 'PUT',
+        headers: {'content-type':'application/json'},
+        body: JSON.stringify(datosEditados)
+    }).then(res => {
+        if (res.ok) {
+            return res.json();
+        }
+    }).then(pelicula => {
+        console.log('Pelicula modificada:', pelicula);
+        mostrarPeliculas();
+        mostrarMensaje("Pelicula modificada");
+        document.querySelector('#form-modificar').style.display = 'none';
+    }).catch(error => {
+        console.error('Error modificando la película:', error);
+    });
 }
